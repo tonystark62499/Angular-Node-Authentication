@@ -1,24 +1,23 @@
-const express = require('express')
-const bodyParser = require('body-parser')
-console.log("before api requried");
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors')
+const path = require('path');
 
-const api = require('./routes/api')
+const api = require('./routes/api');
+const port = 3000;
 
-const PORT = 3000
+const app = express();
+app.use(cors())
+app.use(express.static(path.join(__dirname, 'dist')));
 
-const app = express()
+app.use(bodyParser.json()); 
 
-console.log("before api use");
-app.use('/api', api)
-console.log("after api use");
+app.use('/api', api);
 
-app.get('/', function(request, response) {
-    response.send("Hello from server !!");
-})
-console.log("after get ");
+// app.get('*', (req, res) => {
+//   res.sendFile(path.join(__dirname, 'dist/index.html'));
+// });
 
-app.listen(PORT, function() {
-    console.log("Server running on the port : " + PORT);
-
-})
-console.log("After listen");
+app.listen(port, function(){
+    console.log("Server running on localhost:" + port);
+});

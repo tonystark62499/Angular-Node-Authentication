@@ -1,62 +1,151 @@
-const express = require('express')
-const router = express.Router()
-const User = require('../models/user')
-const mongoose = require("mongoose")
-const db = "mongodb+srv://user_1:0BmhqIvGpyzolM9S@cluster0.vccgb.mongodb.net/eventsdb?retryWrites=true&w=majority"
+const express = require('express');
+const router = express.Router();
+const mongoose = require('mongoose');
+const User = require('../models/user');
+const jwt = require('jsonwebtoken')
+const db = "mongodb://testuser:testpw@ds123136.mlab.com:23136/eventsdb";
+// mongoose.Promise = global.Promise;
 
-console.log("before connecting database");
-
-mongoose.connect(db, err => {
-    if (err) {
-        console.log("Error!" + err);
+mongoose.connect(db, function(err){
+    if(err){
+        console.error('Error! ' + err)
     } else {
-        console.log('connectecd to mongodb');
+      console.log('Connected to mongodb')      
     }
+});
+
+function verifyToken(req, res, next) {
+  if(!req.headers.authorization) {
+    return res.status(401).send('Unauthorized request')
+  }
+  let token = req.headers.authorization.split(' ')[1]
+  if(token === 'null') {
+    return res.status(401).send('Unauthorized request')    
+  }
+  let payload = jwt.verify(token, 'secretKey')
+  if(!payload) {
+    return res.status(401).send('Unauthorized request')    
+  }
+  req.userId = payload.subject
+  next()
+}
+
+router.get('/events', (req,res) => {
+  let events = [
+    {
+      "_id": "1",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "2",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "3",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "4",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "5",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "6",
+      "name": "Auto Expo",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    }
+  ]
+  res.json(events)
 })
 
-
-router.get('/', (req, res) => {
-    res.send("From API route");
+router.get('/special', verifyToken, (req, res) => {
+  let specialEvents = [
+    {
+      "_id": "1",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "2",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "3",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "4",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "5",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    },
+    {
+      "_id": "6",
+      "name": "Auto Expo Special",
+      "description": "lorem ipsum",
+      "date": "2012-04-23T18:25:43.511Z"
+    }
+  ]
+  res.json(specialEvents)
 })
 
-router.post('/register', (request, response) => {
-    let userData = request.body //just getting data form request object
-    let user = new User(userData) //making model from userData and store into user variable
-        // now let's save that user model to the database
-        //it will take callback function as an argument that runs after save method is executed
-        //if it's save successfully then return registerdData,and if not then return error
-    user.save((error, registredData) => {
-        if (error) {
-            console.log(error);
-            response.send("error aavi")
-        } else {
-            console.log(registredData);
-
-            response.status(200).send(registredData)
-        }
-    })
+router.post('/register', (req, res) => {
+  let userData = req.body
+  let user = new User(userData)
+  user.save((err, registeredUser) => {
+    if (err) {
+      console.log(err)      
+    } else {
+      let payload = {subject: registeredUser._id}
+      let token = jwt.sign(payload, 'secretKey')
+      res.status(200).send({token})
+    }
+  })
 })
 
-module.exports = router
+router.post('/login', (req, res) => {
+  let userData = req.body
+  User.findOne({email: userData.email}, (err, user) => {
+    if (err) {
+      console.log(err)    
+    } else {
+      if (!user) {
+        res.status(401).send('Invalid Email')
+      } else 
+      if ( user.password !== userData.password) {
+        res.status(401).send('Invalid Password')
+      } else {
+        let payload = {subject: user._id}
+        let token = jwt.sign(payload, 'secretKey')
+        res.status(200).send({token})
+      }
+    }
+  })
+})
 
-
-
-
-// function sleep(ms) {
-//     return new Promise(resolve => setTimeout(resolve, ms));
-// }
-
-// async function demo() {
-//     console.log('Taking a break...');
-//     await sleep(2000);
-//     console.log('Two seconds later, showing sleep in a loop...');
-
-//     // Sleep in loop
-//     for (let i = 0; i < 5; i++) {
-//         await sleep(2000);
-//         console.log(i);
-//     }
-
-// }
-
-// demo();
+module.exports = router;
